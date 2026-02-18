@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Plaka Pro V3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
+        .input-field { background: #1e293b; border: 1px solid #334155; color: white; padding: 14px; border-radius: 12px; width: 100%; margin-bottom: 12px; font-size: 16px; outline: none; }
+        .btn-orange { background: #f59e0b; color: #000; font-weight: 800; padding: 16px; border-radius: 12px; width: 100%; }
+        .btn-red { background: #ef4444; color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; margin-top: 8px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="p-4 max-w-lg mx-auto">
+
+    <div class="text-center mb-8 pt-4">
+        <h1 class="text-3xl font-black text-amber-500">PLAKA PRO</h1>
+        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Oto Bakım v3</p>
+    </div>
+
+    <div class="card">
+        <h2 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest">🚗 ARAÇ GİRİŞİ</h2>
+        <input type="text" id="plaka" class="input-field" placeholder="PLAKA (Örn: 34ABC123)" oninput="this.value = this.value.toUpperCase()">
+        <input type="text" id="musteri" class="input-field" placeholder="Müşteri Adı / Tel">
+        <select id="islem" class="input-field">
+            <option value="İç Temizlik">1 - İç Temizlik</option>
+            <option value="Dış Temizlik">2 - Dış Temizlik</option>
+            <option value="İç Dış Temizlik">3 - İç Dış Temizlik</option>
+            <option value="VIP Temizlik">4 - VIP Temizlik</option>
+            <option value="Detaylı Temizlik">5 - Detaylı Temizlik</option>
+            <option value="Boya Koruma">6 - Boya Koruma</option>
+            <option value="Seramik Kaplama">7 - Seramik Kaplama</option>
+        </select>
+        <input type="number" id="ucret" class="input-field" placeholder="Ücret (₺)">
+        <button onclick="kayitYap('islem')" class="btn-orange">KAYDET</button>
+    </div>
+
+    <div class="card border-l-4 border-red-500">
+        <h2 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest">💸 GİDER EKLE</h2>
+        <input type="text" id="gider-not" class="input-field" placeholder="Açıklama">
+        <input type="number" id="gider-tutar" class="input-field" placeholder="Tutar (₺)">
+        <button onclick="kayitYap('gider')" class="btn-red">GİDERİ İŞLE</button>
+    </div>
+
+    <div class="text-center mt-6 pb-12">
+        <button onclick="patronPanelAc()" class="text-slate-600 text-[10px] font-bold uppercase underline">Yönetici Girişi</button>
+    </div>
+
+    <div id="patron-ekrani" class="card hidden border-2 border-amber-500">
+        <h2 class="text-center font-bold text-amber-500 mb-6 uppercase">Günlük Özet</h2>
+        <div id="rapor-detay" class="space-y-4"></div>
+        <button onclick="location.reload()" class="w-full mt-6 text-xs text-slate-500">KAPAT</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnlxjPmgl857-v_j-gxATKkDiiMFuO8GQ",
+            authDomain: "plaka-pro-v3.firebaseapp.com",
+            projectId: "plaka-pro-v3",
+            storageBucket: "plaka-pro-v3.firebasestorage.app",
+            messagingSenderId: "994854855186",
+            appId: "1:994854855186:web:585d4e8675c2f9adc76ecb"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.kayitYap = async (tip) => {
+            try {
+                if(tip === 'islem') {
+                    await addDoc(collection(db, "islemler"), {
+                        plaka: document.getElementById('plaka').value,
+                        musteri: document.getElementById('musteri').value,
+                        islem: document.getElementById('islem').value,
+                        ucret: Number(document.getElementById('ucret').value),
+                        tarih: Timestamp.now()
+                    });
+                } else {
+                    await addDoc(collection(db, "giderler"), {
+                        not: document.getElementById('gider-not').value,
+                        tutar: Number(document.getElementById('gider-tutar').value),
+                        tarih: Timestamp.now()
+                    });
+                }
+                alert("Başarıyla Kaydedildi! ✅");
+                location.reload();
+            } catch (e) { alert("Hata: " + e.message); }
+        };
+
+        window.patronPanelAc = async () => {
+            if(prompt("Şifre:") === "5555") {
+                document.getElementById('patron-ekrani').classList.remove('hidden');
+                const iSnap = await getDocs(collection(db, "islemler"));
+                const gSnap = await getDocs(collection(db, "giderler"));
+                let ciro = 0; iSnap.forEach(d => ciro += d.data().ucret);
+                let gider = 0; gSnap.forEach(d => gider += d.data().tutar);
+                document.getElementById('rapor-detay').innerHTML = `
+                    <div class="flex justify-between font-bold"><span>Ciro:</span><span class="text-green-400">${ciro} ₺</span></div>
+                    <div class="flex justify-between font-bold"><span>Gider:</span><span class="text-red-400">${gider} ₺</span></div>
+                    <div class="flex justify-between border-t border-slate-600 pt-2 font-black"><span>Net:</span><span class="text-amber-500">${ciro - gider} ₺</span></div>
+                `;
+            } else { alert("Yanlış!"); }
+        };
+    </script>
+</body>
+</html>
