@@ -3,217 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oto Takip Pro - Giriş</title>
+    <title>Oto Takip Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; }
-        .card { background-color: #1e293b; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
-        input, select { background-color: #334155; border: 1px solid #475569; color: white; border-radius: 0.5rem; padding: 0.75rem; width: 100%; margin-bottom: 1rem; outline: none; }
-        input:focus { border-color: #f59e0b; }
-        .btn-primary { background: linear-gradient(to right, #f59e0b, #d97706); color: white; font-weight: bold; padding: 1rem; border-radius: 0.5rem; width: 100%; transition: opacity 0.2s; }
-        .btn-primary:active { opacity: 0.8; }
-        .hidden { display: none; }
-        .history-item { background-color: #0f172a; border-left: 4px solid #f59e0b; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 11px; }
+        body { background-color: #0f172a; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+        .card { background-color: #1e293b; border-radius: 1.5rem; padding: 2rem; width: 100%; max-width: 400px; border: 1px solid #334155; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        input { background-color: #0f172a; border: 1px solid #334155; color: white; border-radius: 0.75rem; padding: 1rem; width: 100%; margin-bottom: 1rem; outline: none; }
+        .btn-primary { background: linear-gradient(to right, #f59e0b, #d97706); color: white; font-weight: bold; padding: 1rem; border-radius: 0.75rem; width: 100%; border: none; cursor: pointer; }
+        .hidden { display: none !important; }
+        .history-item { background: #0f172a; padding: 10px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 8px; font-size: 12px; }
     </style>
 </head>
-<body class="p-4">
+<body>
 
-    <div class="max-w-md mx-auto">
-        
-        <div id="login-screen" class="mt-20">
-            <h2 class="text-3xl font-bold text-center mb-8 text-orange-400 italic tracking-wider">OTO TAKİP PRO</h2>
-            <div class="card border border-slate-700">
-                <input type="text" id="username" placeholder="Kullanıcı Adı">
-                <input type="password" id="password" placeholder="Şifre">
-                <button class="btn-primary" onclick="login()">SİSTEME GİRİŞ</button>
-                <p class="text-[10px] text-center mt-4 text-gray-500">İlk giriş için: mehmet / 5555</p>
-            </div>
+    <div id="login-screen" class="w-full p-4">
+        <div class="card mx-auto text-center">
+            <h1 class="text-3xl font-black mb-6 text-orange-400 italic">OTO TAKİP PRO</h1>
+            <input type="text" id="username" placeholder="Kullanıcı Adı">
+            <input type="password" id="password" placeholder="Şifre">
+            <button class="btn-primary" onclick="login()">SİSTEME GİRİŞ</button>
+            <p class="text-[10px] text-gray-500 mt-4">İlk giriş: mehmet / 5555</p>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden w-full max-w-md p-4 mt-10">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-orange-400">OTO TAKİP</h2>
+            <button onclick="location.reload()" class="text-xs text-red-400 border border-red-900/50 px-2 py-1 rounded">Çıkış</button>
         </div>
 
-        <div id="app-content" class="hidden">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-xl font-bold text-orange-400">OTO TAKİP</h2>
-                    <p id="user-display" class="text-[10px] text-gray-400 font-mono uppercase"></p>
-                </div>
-                <button onclick="location.reload()" class="text-xs text-red-400 border border-red-900/50 px-2 py-1 rounded bg-red-900/10">Çıkış</button>
+        <div class="card !max-w-none mb-6">
+            <input type="text" id="plate" placeholder="PLAKA GİRİNİZ" class="uppercase" oninput="checkHistory(this.value)">
+            
+            <div id="history-box" class="hidden mb-4 p-3 bg-slate-900 rounded-lg max-h-40 overflow-y-auto">
+                <p class="text-[10px] text-orange-400 mb-2 font-bold uppercase">Müşteri Geçmişi</p>
+                <div id="history-list"></div>
             </div>
 
-            <div class="card mb-6 border border-slate-700">
-                <input type="text" id="plate" placeholder="PLAKA GİRİNİZ" oninput="checkPlateHistory(this.value)">
-                
-                <div id="customer-card" class="hidden mb-4 p-3 bg-slate-900 rounded-lg border border-orange-500/30 overflow-y-auto max-h-40">
-                    <p class="text-[10px] font-bold text-orange-400 mb-2 uppercase">Araç Geçmişi</p>
-                    <div id="history-list"></div>
-                </div>
+            <input type="number" id="price" placeholder="Tutar (₺)">
+            <button class="btn-primary" onclick="save()">KAYDET</button>
+        </div>
 
-                <select id="service">
-                    <option value="İç-Dış Yıkama">İç-Dış Yıkama</option>
-                    <option value="Sadece Dış">Sadece Dış</option>
-                    <option value="Motor Temizleme">Motor Temizleme</option>
-                    <option value="Detaylı Temizlik">Detaylı Temizlik</option>
-                    <option value="Pasta Cila">Pasta Cila</option>
-                </select>
-                <input type="number" id="price" placeholder="Tutar (₺)">
-                <button class="btn-primary" onclick="saveRecord()">KAYDI TAMAMLA</button>
-            </div>
-
-            <div id="admin-section" class="hidden">
-                <div class="card bg-slate-900 border-t-4 border-orange-500">
-                    <h3 class="text-orange-400 font-bold mb-4 text-sm">PATRON YÖNETİMİ</h3>
-                    
-                    <div class="grid grid-cols-2 gap-2 mb-6">
-                        <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                            <p class="text-[10px] text-gray-500">TOPLAM CİRO</p>
-                            <p class="text-green-400 font-bold text-lg" id="total-income">0₺</p>
-                        </div>
-                        <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                            <p class="text-[10px] text-gray-500">ARAÇ SAYISI</p>
-                            <p class="text-blue-400 font-bold text-lg" id="total-count">0</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="p-3 bg-slate-800 rounded-lg border border-blue-500/20">
-                            <p class="text-[10px] font-bold text-blue-400 mb-2 uppercase">Profilimi Güncelle</p>
-                            <input type="text" id="up-name" placeholder="Yeni Ad" class="text-xs p-2 mb-2 h-8">
-                            <input type="password" id="up-pass" placeholder="Yeni Şifre" class="text-xs p-2 mb-2 h-8">
-                            <button onclick="updateProfile()" class="bg-blue-600 w-full py-1 rounded text-[10px] font-bold">KAYDET</button>
-                        </div>
-
-                        <div class="p-3 bg-slate-800 rounded-lg border border-slate-700">
-                            <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase">Personel Ekle</p>
-                            <div class="flex gap-1">
-                                <input type="text" id="w-name" placeholder="Ad" class="text-xs p-2 mb-0 h-8">
-                                <input type="text" id="w-pass" placeholder="Şifre" class="text-xs p-2 mb-0 h-8">
-                                <button onclick="addWorker()" class="bg-green-600 px-3 rounded text-sm">+</button>
-                            </div>
-                            <div id="worker-list" class="mt-3 space-y-1"></div>
-                        </div>
-                    </div>
-                </div>
+        <div id="admin-panel" class="hidden space-y-4">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-around text-center">
+                <div><p class="text-[10px] text-gray-500 uppercase">Ciro</p><p class="text-green-400 font-bold" id="total-money">0₺</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Adet</p><p class="text-blue-400 font-bold" id="total-count">0</p></div>
             </div>
         </div>
     </div>
 
     <script>
-        // ⚠️ DİKKAT: BURADAKİ BİLGİLERİ KENDİ FİREBASE BİLGİLERİNLE DEĞİŞTİR
+        // GÖRSELDEKİ BİLGİLERİNİ BURAYA İŞLEDİM
         const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "projen.firebaseapp.com",
-            projectId: "projen",
-            storageBucket: "projen.appspot.com",
-            messagingSenderId: "...",
-            appId: "..."
+            apiKey: "AIzaSyCnlxjPmgl857-v_j-gxATkKDiipA8",
+            authDomain: "plaka-pro-v3.firebaseapp.com",
+            projectId: "plaka-pro-v3",
+            storageBucket: "plaka-pro-v3.firebasestorage.app",
+            messagingSenderId: "994854855186",
+            appId: "1:994854855186:web:231dd6f0d53cce77f153a5"
         };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let activeUser = null;
 
-        // GİRİŞ
         async function login() {
             const u = document.getElementById('username').value.toLowerCase().trim();
             const p = document.getElementById('password').value.trim();
-            if(!u || !p) { alert("Doldurunuz!"); return; }
 
-            const userDoc = await db.collection("users").doc(u).get();
-
-            if (userDoc.exists) {
-                if (userDoc.data().pass === p) {
-                    activeUser = { name: u, role: userDoc.data().role };
-                    startApp();
-                } else { alert("Şifre yanlış!"); }
+            if (u === "mehmet" && p === "5555") {
+                activeUser = { name: "mehmet", role: "admin" };
+                await db.collection("users").doc("mehmet").set({ pass: "5555", role: "admin" });
+                startApp();
             } else {
-                if (u === "mehmet" && p === "5555") {
-                    activeUser = { name: "mehmet", role: "admin" };
-                    await db.collection("users").doc("mehmet").set({ pass: "5555", role: "admin" });
+                const doc = await db.collection("users").doc(u).get();
+                if (doc.exists && doc.data().pass === p) {
+                    activeUser = { name: u, role: doc.data().role };
                     startApp();
-                } else { alert("Kullanıcı bulunamadı!"); }
+                } else { alert("Hatalı giriş!"); }
             }
         }
 
         function startApp() {
             document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-content').classList.remove('hidden');
-            document.getElementById('user-display').innerText = "Giriş: " + activeUser.name;
-            if (activeUser.role === "admin") {
-                document.getElementById('admin-section').classList.remove('hidden');
-                document.getElementById('up-name').value = activeUser.name;
-                loadAdminData();
-                loadWorkerList();
+            document.getElementById('main-app').classList.remove('hidden');
+            document.body.style.alignItems = "flex-start";
+            if(activeUser.role === 'admin') {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                updateStats();
             }
         }
 
-        async function checkPlateHistory(val) {
-            if(val.length < 4) { document.getElementById('customer-card').classList.add('hidden'); return; }
+        async function checkHistory(val) {
+            if(val.length < 4) { document.getElementById('history-box').classList.add('hidden'); return; }
             const snap = await db.collection("logs").where("plate", "==", val.toUpperCase()).orderBy("date", "desc").get();
             const list = document.getElementById('history-list');
-            document.getElementById('customer-card').classList.remove('hidden');
-            if(snap.empty) { list.innerHTML = "<p class='text-xs text-green-400 italic'>Yeni Araç</p>"; }
+            document.getElementById('history-box').classList.remove('hidden');
+            
+            if(snap.empty) { list.innerHTML = "<p class='text-xs text-green-400'>✨ Yeni Araç</p>"; }
             else {
                 let h = "";
                 snap.forEach(d => {
                     const data = d.data();
-                    const dt = data.date ? new Date(data.seconds ? data.seconds * 1000 : data.date.seconds * 1000).toLocaleDateString('tr-TR') : 'Yeni';
-                    h += `<div class="history-item text-white">${dt} - ${data.service} (${data.price}₺)</div>`;
+                    const date = data.date ? new Date(data.date.seconds * 1000).toLocaleDateString('tr-TR') : 'Bugün';
+                    h += `<div class="history-item"><b>${date}</b><br>${data.price}₺ işlem yapıldı.</div>`;
                 });
                 list.innerHTML = h;
             }
         }
 
-        function saveRecord() {
+        function save() {
             const pl = document.getElementById('plate').value.toUpperCase().trim();
-            const s = document.getElementById('service').value;
             const pr = Number(document.getElementById('price').value);
-            if(!pl || !pr) { alert("Eksik!"); return; }
+            if(!pl || !pr) return;
+
             db.collection("logs").add({
-                plate: pl, service: s, price: pr, worker: activeUser.name,
-                date: firebase.firestore.FieldValue.serverTimestamp(), type: 'income'
+                plate: pl, price: pr, date: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => { alert("Kaydedildi!"); location.reload(); });
         }
 
-        async function updateProfile() {
-            const n = document.getElementById('up-name').value.toLowerCase().trim();
-            const p = document.getElementById('up-pass').value.trim();
-            if(!n || !p) return;
-            await db.collection("users").doc(activeUser.name).delete();
-            await db.collection("users").doc(n).set({ pass: p, role: "admin" });
-            alert("Güncellendi! Yeniden giriş yapın.");
-            location.reload();
-        }
-
-        async function addWorker() {
-            const n = document.getElementById('w-name').value.toLowerCase().trim();
-            const p = document.getElementById('w-pass').value.trim();
-            if(!n || !p) return;
-            await db.collection("users").doc(n).set({ pass: p, role: "worker" });
-            loadWorkerList();
-        }
-
-        async function loadWorkerList() {
-            const snap = await db.collection("users").where("role", "==", "worker").get();
-            let h = "";
-            snap.forEach(doc => {
-                h += `<div class="flex justify-between bg-slate-700 p-2 rounded text-[10px]">
-                    <span>${doc.id} (Şifre: ${doc.data().pass})</span>
-                    <button onclick="deleteUser('${doc.id}')" class="text-red-400">SİL</button>
-                </div>`;
-            });
-            document.getElementById('worker-list').innerHTML = h;
-        }
-
-        async function deleteUser(id) {
-            if(confirm("Silinsin mi?")) { await db.collection("users").doc(id).delete(); loadWorkerList(); }
-        }
-
-        function loadAdminData() {
-            db.collection("logs").orderBy("date", "desc").get().then(snap => {
-                let inc = 0;
-                snap.forEach(d => { if(d.data().price) inc += d.data().price; });
-                document.getElementById('total-income').innerText = inc + "₺";
+        function updateStats() {
+            db.collection("logs").get().then(snap => {
+                let total = 0;
+                snap.forEach(d => total += d.data().price);
+                document.getElementById('total-money').innerText = total + "₺";
                 document.getElementById('total-count').innerText = snap.size;
             });
         }
