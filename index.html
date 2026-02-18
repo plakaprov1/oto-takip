@@ -2,112 +2,200 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Plaka Pro V3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oto Takip - Müşteri Geçmişi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
-        .input-field { background: #1e293b; border: 1px solid #334155; color: white; padding: 14px; border-radius: 12px; width: 100%; margin-bottom: 12px; font-size: 16px; outline: none; }
-        .btn-orange { background: #f59e0b; color: #000; font-weight: 800; padding: 16px; border-radius: 12px; width: 100%; }
-        .btn-red { background: #ef4444; color: white; padding: 12px; border-radius: 12px; width: 100%; font-weight: 600; margin-top: 8px; }
-        .card { background: #1e293b; padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .card { background-color: #1e293b; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+        input, select { background-color: #334155; border: 1px solid #475569; color: white; border-radius: 0.5rem; padding: 0.75rem; width: 100%; margin-bottom: 1rem; }
+        .btn-primary { background: linear-gradient(to right, #f59e0b, #d97706); color: white; font-weight: bold; padding: 1rem; border-radius: 0.5rem; width: 100%; }
+        .history-item { background-color: #0f172a; border-left: 4px solid #f59e0b; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 11px; }
         .hidden { display: none; }
     </style>
 </head>
-<body class="p-4 max-w-lg mx-auto">
+<body class="p-4">
 
-    <div class="text-center mb-8 pt-4">
-        <h1 class="text-3xl font-black text-amber-500">PLAKA PRO</h1>
-        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Oto Bakım v3</p>
+    <div class="max-w-md mx-auto">
+        
+        <div id="login-screen" class="mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8 text-orange-400 italic">OTO TAKİP PRO</h2>
+            <div class="card">
+                <input type="text" id="username" placeholder="Kullanıcı Adı">
+                <input type="password" id="password" placeholder="Şifre">
+                <button class="btn-primary" onclick="login()">SİSTEME GİRİŞ</button>
+            </div>
+        </div>
+
+        <div id="app-content" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-orange-400">OTO TAKİP</h2>
+                    <p id="user-display" class="text-[10px] text-gray-400 font-mono uppercase"></p>
+                </div>
+                <button onclick="location.reload()" class="text-xs text-red-400 border border-red-900/50 px-2 py-1 rounded">Çıkış</button>
+            </div>
+
+            <div class="card mb-6">
+                <h3 class="text-xs font-bold text-gray-400 mb-3 uppercase">Araç Sorgula / Kaydet</h3>
+                <input type="text" id="plate" placeholder="PLAKA GİRİNİZ" oninput="checkPlateHistory(this.value)">
+                
+                <div id="customer-card" class="hidden mb-4 p-3 bg-slate-800 rounded-lg border border-orange-500/30">
+                    <p class="text-xs font-bold text-orange-400 mb-2">🚗 ARAÇ GEÇMİŞİ:</p>
+                    <div id="history-list" class="max-h-40 overflow-y-auto">
+                        </div>
+                </div>
+
+                <select id="service">
+                    <option value="İç-Dış Yıkama">İç-Dış Yıkama</option>
+                    <option value="Sadece Dış">Sadece Dış</option>
+                    <option value="Motor Temizleme">Motor Temizleme</option>
+                    <option value="Detaylı Temizlik">Detaylı Temizlik</option>
+                    <option value="Pasta Cila">Pasta Cila</option>
+                </select>
+                <input type="number" id="price" placeholder="Tutar (₺)">
+                <button class="btn-primary" onclick="saveRecord()">KAYDI TAMAMLA</button>
+            </div>
+
+            <div id="admin-section" class="hidden">
+                <button class="w-full bg-slate-700 text-slate-300 py-3 rounded-lg font-bold text-sm mb-6 border border-slate-600" onclick="toggleAdminPanel()">
+                    📊 CİRO VE GENEL RAPORLAR
+                </button>
+
+                <div id="admin-panel" class="hidden card bg-black/30 border border-orange-500/20 mb-10">
+                    <div class="grid grid-cols-2 gap-2 mb-6 text-center text-[10px]">
+                        <div class="bg-slate-800 p-2 rounded">
+                            <p class="text-gray-500 italic">BUGÜN TOPLAM</p>
+                            <p class="text-green-400 font-bold text-lg" id="total-income">0₺</p>
+                        </div>
+                        <div class="bg-slate-800 p-2 rounded">
+                            <p class="text-gray-500 italic">İŞLEM SAYISI</p>
+                            <p class="text-blue-400 font-bold text-lg" id="total-count">0</p>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-xs font-bold mb-3 text-gray-500 uppercase">Tüm İşlemler (Son 50)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-[10px] text-left">
+                            <tbody id="log-table" class="text-gray-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest">🚗 ARAÇ GİRİŞİ</h2>
-        <input type="text" id="plaka" class="input-field" placeholder="PLAKA (Örn: 34ABC123)" oninput="this.value = this.value.toUpperCase()">
-        <input type="text" id="musteri" class="input-field" placeholder="Müşteri Adı / Tel">
-        <select id="islem" class="input-field">
-            <option value="İç Temizlik">1 - İç Temizlik</option>
-            <option value="Dış Temizlik">2 - Dış Temizlik</option>
-            <option value="İç Dış Temizlik">3 - İç Dış Temizlik</option>
-            <option value="VIP Temizlik">4 - VIP Temizlik</option>
-            <option value="Detaylı Temizlik">5 - Detaylı Temizlik</option>
-            <option value="Boya Koruma">6 - Boya Koruma</option>
-            <option value="Seramik Kaplama">7 - Seramik Kaplama</option>
-        </select>
-        <input type="number" id="ucret" class="input-field" placeholder="Ücret (₺)">
-        <button onclick="kayitYap('islem')" class="btn-orange">KAYDET</button>
-    </div>
+    <script>
+        // KULLANICI YÖNETİMİ
+        const users = {
+            "mehmet": { pass: "5555", role: "admin" },
+            "calisan1": { pass: "1234", role: "worker" }
+        };
 
-    <div class="card border-l-4 border-red-500">
-        <h2 class="text-xs font-bold mb-4 text-slate-400 uppercase tracking-widest">💸 GİDER EKLE</h2>
-        <input type="text" id="gider-not" class="input-field" placeholder="Açıklama">
-        <input type="number" id="gider-tutar" class="input-field" placeholder="Tutar (₺)">
-        <button onclick="kayitYap('gider')" class="btn-red">GİDERİ İŞLE</button>
-    </div>
-
-    <div class="text-center mt-6 pb-12">
-        <button onclick="patronPanelAc()" class="text-slate-600 text-[10px] font-bold uppercase underline">Yönetici Girişi</button>
-    </div>
-
-    <div id="patron-ekrani" class="card hidden border-2 border-amber-500">
-        <h2 class="text-center font-bold text-amber-500 mb-6 uppercase">Günlük Özet</h2>
-        <div id="rapor-detay" class="space-y-4"></div>
-        <button onclick="location.reload()" class="w-full mt-6 text-xs text-slate-500">KAPAT</button>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+        // FIREBASE AYARLARINI BURAYA YAPIŞTIR
         const firebaseConfig = {
-            apiKey: "AIzaSyCnlxjPmgl857-v_j-gxATKkDiiMFuO8GQ",
+            apiKey: "AIzaSy...",
             authDomain: "plaka-pro-v3.firebaseapp.com",
             projectId: "plaka-pro-v3",
-            storageBucket: "plaka-pro-v3.firebasestorage.app",
-            messagingSenderId: "994854855186",
-            appId: "1:994854855186:web:585d4e8675c2f9adc76ecb"
+            storageBucket: "...",
+            messagingSenderId: "...",
+            appId: "..."
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let activeUser = null;
 
-        window.kayitYap = async (tip) => {
-            try {
-                if(tip === 'islem') {
-                    await addDoc(collection(db, "islemler"), {
-                        plaka: document.getElementById('plaka').value,
-                        musteri: document.getElementById('musteri').value,
-                        islem: document.getElementById('islem').value,
-                        ucret: Number(document.getElementById('ucret').value),
-                        tarih: Timestamp.now()
-                    });
-                } else {
-                    await addDoc(collection(db, "giderler"), {
-                        not: document.getElementById('gider-not').value,
-                        tutar: Number(document.getElementById('gider-tutar').value),
-                        tarih: Timestamp.now()
-                    });
-                }
-                alert("Başarıyla Kaydedildi! ✅");
-                location.reload();
-            } catch (e) { alert("Hata: " + e.message); }
-        };
+        function login() {
+            const u = document.getElementById('username').value.toLowerCase();
+            const p = document.getElementById('password').value;
+            if (users[u] && users[u].pass === p) {
+                activeUser = { name: u, role: users[u].role };
+                startApp();
+            } else { alert("Hatalı Giriş!"); }
+        }
 
-        window.patronPanelAc = async () => {
-            if(prompt("Şifre:") === "5555") {
-                document.getElementById('patron-ekrani').classList.remove('hidden');
-                const iSnap = await getDocs(collection(db, "islemler"));
-                const gSnap = await getDocs(collection(db, "giderler"));
-                let ciro = 0; iSnap.forEach(d => ciro += d.data().ucret);
-                let gider = 0; gSnap.forEach(d => gider += d.data().tutar);
-                document.getElementById('rapor-detay').innerHTML = `
-                    <div class="flex justify-between font-bold"><span>Ciro:</span><span class="text-green-400">${ciro} ₺</span></div>
-                    <div class="flex justify-between font-bold"><span>Gider:</span><span class="text-red-400">${gider} ₺</span></div>
-                    <div class="flex justify-between border-t border-slate-600 pt-2 font-black"><span>Net:</span><span class="text-amber-500">${ciro - gider} ₺</span></div>
-                `;
-            } else { alert("Yanlış!"); }
-        };
+        function startApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('user-display').innerText = "GÖREVLİ: " + activeUser.name;
+            if (activeUser.role === "admin") {
+                document.getElementById('admin-section').classList.remove('hidden');
+                loadAdminData();
+            }
+        }
+
+        // 🔍 GELİŞMİŞ PLAKA SORGULAMA (GEÇMİŞİ GÖSTERİR)
+        async function checkPlateHistory(val) {
+            const historyList = document.getElementById('history-list');
+            const customerCard = document.getElementById('customer-card');
+            
+            if(val.length < 4) {
+                customerCard.classList.add('hidden');
+                return;
+            }
+
+            const snap = await db.collection("logs")
+                               .where("plate", "==", val.toUpperCase())
+                               .orderBy("date", "desc")
+                               .get();
+
+            if (snap.empty) {
+                customerCard.classList.remove('hidden');
+                historyList.innerHTML = `<p class="text-green-400 text-xs italic">✨ Bu araç sistemde kayıtlı değil, İLK GELİŞİ.</p>`;
+            } else {
+                customerCard.classList.remove('hidden');
+                let html = `<p class="text-white text-xs mb-2">Bu araç toplam <b>${snap.size} kez</b> geldi:</p>`;
+                
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const dt = d.date ? new Date(d.date.seconds * 1000).toLocaleString('tr-TR') : 'Yeni Kayıt';
+                    html += `
+                        <div class="history-item">
+                            <span class="text-orange-300">${dt}</span><br>
+                            <span>${d.service} - <b>${d.price}₺</b></span>
+                        </div>`;
+                });
+                historyList.innerHTML = html;
+            }
+        }
+
+        function saveRecord() {
+            const plate = document.getElementById('plate').value.toUpperCase();
+            const service = document.getElementById('service').value;
+            const price = Number(document.getElementById('price').value);
+            if(!plate || !price) { alert("Lütfen plaka ve fiyat girin!"); return; }
+
+            db.collection("logs").add({
+                plate: plate, service: service, price: price,
+                worker: activeUser.name,
+                date: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'income'
+            }).then(() => { alert("Başarıyla Kaydedildi!"); location.reload(); });
+        }
+
+        function toggleAdminPanel() {
+            document.getElementById('admin-panel').classList.toggle('hidden');
+        }
+
+        function loadAdminData() {
+            db.collection("logs").orderBy("date", "desc").limit(50).get().then((snap) => {
+                let income = 0; let count = 0; let html = "";
+                snap.forEach((doc) => {
+                    const d = doc.data();
+                    if(d.type === 'income') {
+                        income += d.price;
+                        count++;
+                        html += `<tr class="border-b border-slate-800"><td class="py-2 font-bold">${d.plate}</td><td>${d.service}</td><td class="text-right text-green-400">${d.price}₺</td></tr>`;
+                    }
+                });
+                document.getElementById('total-income').innerText = income + "₺";
+                document.getElementById('total-count').innerText = count;
+                document.getElementById('log-table').innerHTML = html;
+            });
+        }
     </script>
 </body>
 </html>
