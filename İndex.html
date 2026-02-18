@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oto Takip Pro v7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .card { background-color: #1e293b; border-radius: 1.25rem; padding: 1.5rem; border: 1px solid #334155; }
+        input, select { background-color: #0f172a; border: 1px solid #334155; color: white; border-radius: 0.6rem; padding: 0.8rem; width: 100%; margin-bottom: 1rem; outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-weight: bold; padding: 1rem; border-radius: 0.8rem; width: 100%; }
+        .hidden { display: none !important; }
+        .log-item { background: #0f172a; border-left: 4px solid #f59e0b; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+        .counter-badge { background: #f59e0b; color: #000; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <div id="login-screen" class="w-full max-w-sm mt-20">
+        <div class="card text-center">
+            <h1 class="text-3xl font-black text-orange-400 mb-6 italic">OTO TAKİP PRO</h1>
+            <input type="text" id="username" placeholder="Kullanıcı Adı">
+            <input type="password" id="password" placeholder="Şifre">
+            <button class="btn-primary" onclick="login()">SİSTEME GİRİŞ</button>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden w-full max-w-md space-y-4">
+        <div class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700">
+            <div>
+                <p class="text-[10px] text-gray-400">Hoş geldin</p>
+                <p class="font-bold text-orange-400 uppercase" id="display-user"></p>
+            </div>
+            <button onclick="location.reload()" class="text-xs bg-red-900/30 text-red-400 px-3 py-1 rounded-lg">Çıkış</button>
+        </div>
+
+        <div class="card">
+            <div id="visit-count-box" class="hidden flex justify-center mb-4">
+                <span class="counter-badge" id="visit-text"></span>
+            </div>
+
+            <input type="text" id="plate" placeholder="PLAKA GİRİNİZ" class="text-2xl font-black text-center uppercase mb-4" oninput="checkHistory(this.value)">
+            
+            <div id="customer-reminder" class="hidden p-3 bg-slate-900 rounded-xl border border-dashed border-orange-500/50 mb-4">
+                <p class="text-[10px] text-orange-400 uppercase font-bold mb-1">Kayıtlı Müşteri:</p>
+                <p id="rem-name" class="font-bold"></p>
+                <p id="rem-phone" class="text-xs text-gray-500 italic"></p> </div>
+
+            <input type="text" id="cust-name" placeholder="Müşteri Adı Soyadı">
+            <input type="tel" id="cust-phone" placeholder="Telefon (Personel Ekleyebilir)">
+            
+            <select id="service-type">
+                <option value="İç Dış Yıkama">1- İç Dış Yıkama</option>
+                <option value="İç Yıkama">2- İç Yıkama</option>
+                <option value="Dış Yıkama">3- Dış Yıkama</option>
+                <option value="VIP İç Temizlik">4- VIP İç Temizlik</option>
+                <option value="VIP Dış Temizlik">5- VIP Dış Temizlik</option>
+                <option value="Boya Koruma">6- Boya Koruma</option>
+                <option value="Seramik Kaplama">7- Seramik Kaplama</option>
+            </select>
+            
+            <input type="number" id="price" placeholder="Tutar (₺)">
+            <button class="btn-primary" onclick="saveRecord()">KAYDI TAMAMLA</button>
+        </div>
+
+        <div id="history-box" class="hidden card !bg-slate-900 max-h-60 overflow-y-auto">
+            <p class="text-[10px] text-orange-400 font-bold mb-2 uppercase">İşlem Geçmişi:</p>
+            <div id="history-list" class="space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnlxjPmgl857-v_j-gxATkKDiipA8",
+            authDomain: "plaka-pro-v3.firebaseapp.com",
+            projectId: "plaka-pro-v3",
+            storageBucket: "plaka-pro-v3.firebasestorage.app",
+            messagingSenderId: "994854855186",
+            appId: "1:994854855186:web:231dd6f0d53cce77f153a5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let currentUser = null;
+
+        async function login() {
+            const u = document.getElementById('username').value.toLowerCase().trim();
+            const p = document.getElementById('password').value.trim();
+            if (u === "mehmet" && p === "5555") {
+                currentUser = { name: "mehmet", role: "admin" };
+                await db.collection("users").doc("mehmet").set({ pass: "5555", role: "admin" });
+                initApp();
+            } else {
+                const doc = await db.collection("users").doc(u).get();
+                if (doc.exists && doc.data().pass === p) {
+                    currentUser = { name: u, role: doc.data().role };
+                    initApp();
+                } else { alert("Hatalı giriş!"); }
+            }
+        }
+
+        function initApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('display-user').innerText = currentUser.name;
+        }
+
+        async function checkHistory(val) {
+            const plate = val.toUpperCase().trim();
+            const reminder = document.getElementById('customer-reminder');
+            const historyBox = document.getElementById('history-box');
+            const countBox = document.getElementById('visit-count-box');
+
+            if(plate.length < 4) { 
+                reminder.classList.add('hidden');
+                historyBox.classList.add('hidden');
+                countBox.classList.add('hidden');
+                return; 
+            }
+            
+            const snap = await db.collection("records").where("plate", "==", plate).orderBy("timestamp", "desc").get();
+            
+            if(!snap.empty) {
+                const lastData = snap.docs[0].data();
+                const visitCount = snap.size;
+
+                // 1. Ziyaret Sayısını Göster
+                countBox.classList.remove('hidden');
+                document.getElementById('visit-text').innerText = "Bu araç " + visitCount + ". kez geliyor";
+
+                // 2. Müşteri Hatırlatıcısı (Gizlilik Filtreli)
+                reminder.classList.remove('hidden');
+                document.getElementById('rem-name').innerText = "👤 " + (lastData.customer_name || "İsimsiz");
+                
+                // Telefon Gizleme Mantığı
+                if(currentUser.role === 'admin') {
+                    document.getElementById('rem-phone').innerText = "📞 " + (lastData.phone || "Telefon yok");
+                } else {
+                    document.getElementById('rem-phone').innerText = "📞 [Telefon Gizli]";
+                }
+
+                // 3. Geçmiş Listesi
+                historyBox.classList.remove('hidden');
+                let html = "";
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const date = d.timestamp ? new Date(d.timestamp.seconds * 1000).toLocaleDateString('tr-TR') : 'Bugün';
+                    html += `<div class="log-item"><b>${date}</b>: ${d.service}</div>`;
+                });
+                document.getElementById('history-list').innerHTML = html;
+            } else {
+                reminder.classList.add('hidden');
+                historyBox.classList.add('hidden');
+                countBox.classList.add('hidden');
+            }
+        }
+
+        async function saveRecord() {
+            const pl = document.getElementById('plate').value.toUpperCase().trim();
+            const pr = Number(document.getElementById('price').value);
+            const sv = document.getElementById('service-type').value;
+            const cName = document.getElementById('cust-name').value.trim();
+            const cPhone = document.getElementById('cust-phone').value.trim();
+
+            if(!pl || !pr) { alert("Plaka ve tutar zorunludur!"); return; }
+
+            await db.collection("records").add({
+                plate: pl, price: pr, service: sv,
+                customer_name: cName, phone: cPhone,
+                staff: currentUser.name, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("Kayıt Başarılı!");
+            location.reload();
+        }
+    </script>
+</body>
+</html>
